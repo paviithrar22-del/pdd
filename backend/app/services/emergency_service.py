@@ -3,7 +3,7 @@ Emergency Response Service
 Sends email via SMTP (Gmail) first, then Resend API, then logs as mock.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 from app.models.moderation import EmergencyReport, EmailLog
 from app.models.user import User
@@ -115,7 +115,7 @@ def trigger_emergency(
       </div>
       <p><strong>Severity Score:</strong> {severity_score}/100</p>
       <p><strong>Incident Type:</strong> {incident_type}</p>
-      <p><strong>Time:</strong> {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}</p>
+      <p><strong>Time:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}</p>
       <p style="color:#6c7086;font-size:12px">This is an automated alert from CyberShield AI. Please review the dashboard immediately.</p>
     </div>
     """

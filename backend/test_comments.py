@@ -12,10 +12,11 @@ async def run():
         post_links = await page.locator("a[href*='/p/']").all()
         if post_links:
             href = await post_links[0].get_attribute("href")
-            post_url = f"https://www.instagram.com{href}" if href.startswith("/") else href
-            print(f"Going to post: {post_url}")
-            await page.goto(post_url)
-            await page.wait_for_timeout(4000)
+            if href:
+                post_url = f"https://www.instagram.com{href}" if href.startswith("/") else href
+                print(f"Going to post: {post_url}")
+                await page.goto(post_url)
+                await page.wait_for_timeout(4000)
             
             # Dump HTML to debug
             html = await page.content()

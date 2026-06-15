@@ -3,7 +3,7 @@ AI Moderation Service
 Uses unitary/toxic-bert via HuggingFace pipeline.
 Falls back to enhanced keyword-based scoring if model unavailable.
 """
-from typing import Optional
+from typing import Optional, cast, Any
 import logging
 import re
 
@@ -105,7 +105,7 @@ def _keyword_score(text: str) -> dict:
     if not category_scores:
         return {"toxicity_score": 0.0, "category": "safe", "confidence": 1.0}
 
-    top_category = max(category_scores, key=category_scores.get)
+    top_category = max(category_scores, key=lambda k: category_scores[k])
     top_score = category_scores[top_category]
 
     # Composite toxicity: weighted average of all triggered categories
@@ -136,7 +136,7 @@ def classify_text(text: str) -> dict:
         return _keyword_score(text)
 
     try:
-        results = pipe(text[:512])[0]
+        results = cast(list[dict[str, Any]], pipe(text[:512])[0])
         label_map = {r["label"].lower(): r["score"] for r in results}
 
         toxic_score    = label_map.get("toxic", 0.0)
@@ -155,7 +155,7 @@ def classify_text(text: str) -> dict:
             "severe_toxic": severe_toxic,
         }
 
-        top_category = max(scores, key=scores.get)
+        top_category = max(scores, key=lambda k: scores[k])
         top_score = scores[top_category]
 
         # Composite score: severe_toxic is a strong signal

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta, date, timezone
 from app.database.base import get_db
 from app.api.auth.routes import get_current_user
 from app.models.user import User
@@ -25,7 +25,7 @@ def overview(user: User = Depends(get_current_user), db: Session = Depends(get_d
     unread_alerts = db.query(Alert).filter(Alert.user_id == user.id, Alert.status == "unread").count()
 
     # --- Today vs Yesterday delta (additive new keys) ---
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).replace(tzinfo=None)
     yesterday_start = today_start - timedelta(days=1)
 
     flagged_today = (

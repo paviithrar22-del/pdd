@@ -6,7 +6,8 @@ Session expires after 15 minutes.
 import asyncio
 import logging
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import cast
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.security import decrypt
@@ -25,7 +26,7 @@ def is_session_expired(account: InstagramAccount) -> bool:
     if not account.session_started_at:
         return True
     expiry = account.session_started_at + timedelta(minutes=settings.INSTAGRAM_SESSION_EXPIRE_MINUTES)
-    return datetime.utcnow() > expiry
+    return datetime.now(timezone.utc).replace(tzinfo=None) > expiry
 
 
 async def _scrape_comments(page, post_url: str) -> list[dict]:
@@ -311,6 +312,7 @@ async def _scrape_dms(page, username=None, password=None) -> list[dict]:
         # --- Step 2: Click each thread and extract messages ---
         # We limit to the top 5 recent threads
         for i in range(min(5, len(valid_threads))):
+            participant = f"thread_{i+1}"
             try:
                 thread_element = valid_threads[i]
                 logger.info(f"Clicking thread #{i+1}...")
@@ -774,10 +776,10 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
 
 
 def start_monitoring(account: InstagramAccount, target_profile_url: str = None):
-    if account.id in _active_monitors:
+    if cast(int, account.id) in _active_monitors:
         return
     stop_event = threading.Event()
-    _active_monitors[account.id] = stop_event
+    _active_monitors[cast(int, account.id)] = stop_event
 
     def run():
         import sys
@@ -785,9 +787,9 @@ def start_monitoring(account: InstagramAccount, target_profile_url: str = None):
             asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        loop.run_until_complete(_run_monitor(account.id, stop_event, target_profile_url))
+        loop.run_until_complete(_run_monitor(cast(int, account.id), stop_event, target_profile_url))
         loop.close()
-        _active_monitors.pop(account.id, None)
+        _active_monitors.pop(cast(int, account.id), None)
 
     t = threading.Thread(target=run, daemon=True)
     t.start()

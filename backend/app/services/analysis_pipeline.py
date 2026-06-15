@@ -4,7 +4,8 @@ Called after collector stores content.
 Runs: moderation → severity → violation tracking → emergency trigger
 """
 import logging
-from datetime import datetime, timedelta, date
+import asyncio
+from datetime import datetime, timedelta, date, timezone
 from collections import defaultdict
 from sqlalchemy.orm import Session
 from app.services.moderation_service import classify_text
@@ -183,7 +184,7 @@ def get_risk_trend(violations: list) -> str:
     if len(violations) < 2:
         return "stable"
 
-    cutoff = datetime.utcnow() - timedelta(days=7)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
     recent = sum(1 for v in violations if v.created_at and v.created_at >= cutoff)
     older = len(violations) - recent
 
@@ -204,7 +205,7 @@ def get_daily_violations_trend(db: Session, days: int = 14) -> list:
     from sqlalchemy import func, cast
     import sqlalchemy.types as types
 
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
 
     rows = (
         db.query(
@@ -226,8 +227,60 @@ def get_daily_violations_trend(db: Session, days: int = 14) -> list:
     # Generate a zero-filled contiguous series
     result = []
     for i in range(days - 1, -1, -1):
-        day = (datetime.utcnow() - timedelta(days=i)).date()
+        day = (datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=i)).date()
         day_str = day.isoformat()
         result.append({"date": day_str, "count": counts.get(day_str, 0)})
 
     return result
+
+
+def calculate_threat_density(flagged_count: int, message_count: int) -> float:
+    """
+    Calculates the ratio of flagged messages to total messages as a percentage.
+    """
+    if message_count <= 0:
+        return 0.0
+    return round((flagged_count / message_count) * 100.0, 1)
+
+
+def get_conversation_escalation(moderation_results: list) -> str:
+    """
+    Analyzes moderation results for escalation trend (escalating, de-escalating, stable, insufficient_data).
+    """
+    if len(moderation_results) < 3:
+        return "insufficient_data"
+
+    mid = len(moderation_results) // 2
+    first_half = moderation_results[:mid]
+    second_half = moderation_results[mid:]
+
+    avg_first = sum(m.toxicity_score or 0.0 for m in first_half) / len(first_half)
+    avg_second = sum(m.toxicity_score or 0.0 for m in second_half) / len(second_half)
+
+    diff = avg_second - avg_first
+    if diff > 0.15:
+        return "escalating"
+    elif diff < -0.15:
+        return "de-escalating"
+    else:
+        return "stable"
+
+
+def calculate_abuse_frequency(messages: list, flagged_count: int) -> float:
+    """
+    Calculates average abuse incidents per day, capping the duration to a minimum of 1 day.
+    """
+    if flagged_count <= 0 or not messages:
+        return 0.0
+
+    timestamps = [m.timestamp for m in messages if m.timestamp]
+    if len(timestamps) < 2:
+        return float(flagged_count)
+
+    min_ts = min(timestamps)
+    max_ts = max(timestamps)
+
+    delta = max_ts - min_ts
+    days = delta.total_seconds() / 86400.0
+
+    return round(flagged_count / max(days, 1.0), 1)

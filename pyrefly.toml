@@ -1,0 +1,15 @@
+python-interpreter-path = "C:/Users/dines/AppData/Local/Programs/Python/Python310/python.exe"
+site-package-path = ["C:/Users/dines/AppData/Local/Programs/Python/Python310/Lib/site-packages"]
+search-path = [
+  "c:/Users/dines/Downloads/cybershield/cybershield/backend",
+  "backend"
+]
+
+[errors]
+bad-assignment = "ignore"
+bad-argument-type = "ignore"
+bad-function-definition = "ignore"
+untyped-import = "ignore"
+unsupported-operation = "ignore"
+unknown-name = "ignore"
+parse-error = "ignore"

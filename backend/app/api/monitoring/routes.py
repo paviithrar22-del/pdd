@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from pydantic import BaseModel
 from typing import Optional
 from app.database.base import get_db
@@ -45,7 +45,7 @@ def start(req: MonitorStartRequest, user: User = Depends(get_current_user), db: 
         account.password_encrypted = encrypt(req.instagram_password)
 
     account.monitoring_status = "running"
-    account.session_started_at = datetime.utcnow()
+    account.session_started_at = datetime.now(timezone.utc).replace(tzinfo=None)
     db.commit()
     db.refresh(account)
 
