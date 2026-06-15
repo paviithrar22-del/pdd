@@ -122,7 +122,7 @@ def ingest(req: IngestRequest, user: User = Depends(get_current_user), db: Sessi
         content_id = record.id
 
         # Run full pipeline
-        result = analyze_content(db, user, "message", content_id, req.text, req.author)
+        result = analyze_content(user.id, "message", content_id, req.text, req.author)
 
         # Update conversation counters
         conv.message_count = (conv.message_count or 0) + 1
@@ -167,7 +167,7 @@ def ingest(req: IngestRequest, user: User = Depends(get_current_user), db: Sessi
         db.refresh(record)
         content_id = record.id
 
-        result = analyze_content(db, user, "comment", content_id, req.text, req.author)
+        result = analyze_content(user.id, "comment", content_id, req.text, req.author)
 
     if not result:
         return {"success": True, "message": "Content is safe (no analysis triggered)", "data": {
