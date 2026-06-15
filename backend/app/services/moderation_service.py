@@ -26,9 +26,9 @@ CATEGORY_KEYWORDS: dict[str, list[str]] = {
         "slur", "n-word", "hate all", "go back to your country",
     ],
     "harassment": [
-        "loser", "pathetic", "worthless", "stupid", "idiot", "moron", "ugly",
-        "nobody likes you", "kill yourself", "kys", "you suck", "shut up",
-        "get lost", "waste of space", "freak", "creep", "gtfo",
+        "loser", "looser", "loosers", "pathetic", "worthless", "stupid", "idiot",
+        "moron", "ugly", "nobody likes you", "kill yourself", "kys", "you suck",
+        "shut up", "get lost", "waste of space", "freak", "creep", "gtfo",
     ],
     "insult": [
         "dumb", "trash", "garbage", "disgusting", "gross", "pig", "fat",
@@ -41,6 +41,7 @@ CATEGORY_KEYWORDS: dict[str, list[str]] = {
     "cyberbullying": [
         "everyone hates you", "no one likes you", "you have no friends",
         "you should be ashamed", "delete yourself", "end yourself", "kys",
+        "bully", "bullying", "bullies",
     ],
 }
 

@@ -5,6 +5,7 @@ Session expires after 15 minutes.
 """
 import asyncio
 import logging
+import re as _re
 import threading
 from datetime import datetime, timedelta, timezone
 from typing import cast
@@ -18,6 +19,15 @@ from app.models.user import User
 from app.services.analysis_pipeline import analyze_content
 
 logger = logging.getLogger(__name__)
+
+TIMESTAMP_PATTERN = _re.compile(
+    r'^(\d+[smhdwy]|just now|yesterday|\d{1,2}:\d{2}(?:[\s\u202f\xa0]*[ap]m)?)$', 
+    _re.IGNORECASE
+)
+DATE_PATTERN = _re.compile(
+    r'^([A-Za-z]{3,9}\s+\d{1,2}(?:,\s+\d{4})?|\d{1,2}\s+[A-Za-z]{3,9}(?:\s+\d{4})?)$',
+    _re.IGNORECASE
+)
 
 _active_monitors: dict[int, threading.Event] = {}
 
@@ -426,7 +436,6 @@ async def _scrape_dms(page, username=None, password=None) -> list[dict]:
                     with open(f"thread_{safe_name}_debug.html", "w", encoding="utf-8") as f:
                         f.write(html)
                         
-                import re as _re
                 # UI noise: sidebar labels, timestamps (1m, 2h, 3d), UI actions
                 SKIP_EXACT = {
                     "Home", "Search", "Explore", "Reels", "Messages", "Notifications",
@@ -439,8 +448,6 @@ async def _scrape_dms(page, username=None, password=None) -> list[dict]:
                     "Reacted to", "Active now", "new messages", "You replied",
                     "Shared a post", "Shared a story",
                 ]
-                # Pattern: pure timestamps like "1m", "2h", "5d", "Just now"
-                TIMESTAMP_PATTERN = _re.compile(r'^(\d+[smhdw]|just now|yesterday|\d{1,2}:\d{2}(?: [ap]m)?)$', _re.IGNORECASE)
                 
                 seen_msgs_in_thread = set()
                 for text in extracted_msgs[-50:]:
@@ -453,8 +460,8 @@ async def _scrape_dms(page, username=None, password=None) -> list[dict]:
                         # Exact UI label skip
                         if clean_text in SKIP_EXACT:
                             continue
-                        # Timestamp pattern skip
-                        if TIMESTAMP_PATTERN.match(clean_text):
+                        # Timestamp / Date pattern skip
+                        if TIMESTAMP_PATTERN.match(clean_text) or DATE_PATTERN.match(clean_text):
                             continue
                         # Contains skip
                         if any(p.lower() in clean_text.lower() for p in SKIP_CONTAINS):
@@ -503,7 +510,7 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
             state_dir = "sessions"
             os.makedirs(state_dir, exist_ok=True)
             state_path = os.path.join(state_dir, f"account_{username}.json")
-            
+
             if os.path.exists(state_path):
                 context = await browser.new_context(storage_state=state_path)
                 logger.info(f"Loaded existing session state for {username}")
@@ -513,45 +520,52 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
             page = await context.new_page()
 
             # Check if already logged in by going to homepage
-            # Check if already logged in by going to login page directly.
-            # If already logged in, Instagram redirects to the feed.
             try:
                 for retry in range(3):
                     try:
-                        await page.goto("https://www.instagram.com/accounts/login/", timeout=30000)
+                        await page.goto("https://www.instagram.com/", timeout=30000)
                         break
                     except Exception as goto_err:
-                        logger.warning(f"goto login retry {retry}: {goto_err}")
+                        logger.warning(f"goto homepage retry {retry}: {goto_err}")
                         await page.wait_for_timeout(2000)
                 
-                await page.wait_for_timeout(3000)
+                # Wait for any redirects to settle
+                await page.wait_for_timeout(5000)
+                
+                # Dismiss cookie consent dialog if it appears on homepage or login page
+                for cookie_text in ['Allow all cookies', 'Accept all cookies', 'Decline optional cookies']:
+                    try:
+                        btn = page.locator(f"button:has-text('{cookie_text}')")
+                        if await btn.count() > 0:
+                            logger.info(f"Dismissing cookies popup: {cookie_text}")
+                            await btn.first.click()
+                            await page.wait_for_timeout(2000)
+                            break
+                    except Exception:
+                        pass
                 
                 # --- Robust login state machine ---
-                # Instagram shows 3 different screens depending on session state:
-                # (A) Normal form: username + password inputs
-                # (B) Saved profile: "Continue" button (no username input)
-                # (C) Already logged in: redirected away from /accounts/login/
-                
                 if "login" not in page.url:
-                    logger.info(f"Already logged in as {username} (redirected to {page.url})")
+                    logger.info(f"Already logged in as {username} (current URL: {page.url})")
                 else:
-                    logger.info(f"Login required for {username}. Detecting login screen type...")
+                    logger.info(f"Login required for {username}. Current URL is: {page.url}")
                     
                     # Delete the stale session file so we start fresh next time
                     if os.path.exists(state_path):
                         os.remove(state_path)
                         logger.info("Deleted stale session file.")
                     
-                    # Check for cookie consent first
-                    for cookie_text in ['Allow all cookies', 'Accept all cookies']:
-                        btn = page.locator(f"button:has-text('{cookie_text}')")
-                        if await btn.count() > 0:
-                            logger.info(f"Accepting cookies: {cookie_text}")
-                            await btn.first.click()
-                            await page.wait_for_timeout(1500)
-                            break
-                    
-                    # PHASE 1: Handle "Continue" button (saved profile screen)
+                    # Dismiss cookie consent specifically on the login page as well
+                    for cookie_text in ['Allow all cookies', 'Accept all cookies', 'Decline optional cookies']:
+                        try:
+                            btn = page.locator(f"button:has-text('{cookie_text}')")
+                            if await btn.count() > 0:
+                                logger.info(f"Accepting cookies on login page: {cookie_text}")
+                                await btn.first.click()
+                                await page.wait_for_timeout(2000)
+                                break
+                        except Exception:
+                            pass
                     continue_btn = page.locator("button:has-text('Continue')")
                     if await continue_btn.count() > 0 and await continue_btn.first.is_visible():
                         logger.info("Detected saved profile screen. Clicking 'Continue'...")
@@ -683,13 +697,20 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
                             logger.info(f"  Got {len(raw_comments)} comments from {post_url}")
                             for c in raw_comments:
                                 try:
+                                    c_content = c["content"].strip()
+                                    if not c_content or len(c_content) < 3:
+                                        continue
+                                    if TIMESTAMP_PATTERN.match(c_content) or DATE_PATTERN.match(c_content):
+                                        logger.info(f"    Skipping scraped comment timestamp/date: '{c_content}'")
+                                        continue
+
                                     exists = db.query(Comment).filter(
                                         Comment.post_id == post.id,
                                         Comment.author == c["author"],
-                                        Comment.content == c["content"]
+                                        Comment.content == c_content
                                     ).first()
                                     if not exists:
-                                        comment = Comment(post_id=post.id, author=c["author"], content=c["content"])
+                                        comment = Comment(post_id=post.id, author=c["author"], content=c_content)
                                         db.add(comment)
                                         db.commit()
                                         db.refresh(comment)
