@@ -496,9 +496,10 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
             return
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
-            
             import os
+            is_render = os.environ.get("RENDER") is not None
+            is_headless = is_render or os.environ.get("HEADLESS", "false").lower() == "true"
+            browser = await p.chromium.launch(headless=is_headless)
             state_dir = "sessions"
             os.makedirs(state_dir, exist_ok=True)
             state_path = os.path.join(state_dir, f"account_{account_id}.json")

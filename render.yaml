@@ -1,13 +1,11 @@
 services:
   - type: web
     name: cybershield-backend
-    runtime: python
+    runtime: docker
     region: singapore       # Closest to India
     plan: free              # Free tier
     # plan: starter         # $7/mo — only 512MB RAM, insufficient for ML models
     rootDir: backend
-    buildCommand: pip install -r requirements-render.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

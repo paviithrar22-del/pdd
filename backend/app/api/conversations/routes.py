@@ -16,7 +16,7 @@ def list_conversations(user: User = Depends(get_current_user), db: Session = Dep
         {
             "id": c.id,
             "participant": c.participant,
-            "risk_score": round(c.risk_score or 0, 1),
+            "risk_score": round(float(c.risk_score or 0), 1),
             "message_count": c.message_count,
             "flagged_count": c.flagged_count,
         } for c in convs
@@ -33,7 +33,7 @@ def conversation_detail(conv_id: int, user: User = Depends(get_current_user), db
         "conversation": {
             "id": conv.id,
             "participant": conv.participant,
-            "risk_score": round(conv.risk_score or 0, 1),
+            "risk_score": round(float(conv.risk_score or 0), 1),
             "message_count": conv.message_count,
             "flagged_count": conv.flagged_count,
         },
@@ -88,7 +88,7 @@ def conversation_intelligence(conv_id: int, user: User = Depends(get_current_use
     return {"success": True, "message": "OK", "data": {
         "conversation_id": conv.id,
         "participant": conv.participant,
-        "risk_score": round(conv.risk_score or 0, 1),
+        "risk_score": round(float(conv.risk_score or 0), 1),
         "message_count": conv.message_count,
         "flagged_count": conv.flagged_count,
         "threat_density_percent": calculate_threat_density(conv.flagged_count or 0, conv.message_count or 0),
