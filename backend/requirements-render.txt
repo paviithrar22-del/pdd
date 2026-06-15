@@ -1,0 +1,29 @@
+# ─────────────────────────────────────────────────────────────────
+# requirements-render.txt  ─  Lean build for Render free tier
+# ─────────────────────────────────────────────────────────────────
+# torch + transformers (~2 GB) are intentionally excluded here.
+# The moderation_service has a keyword-based fallback that activates
+# automatically when toxic-bert cannot load.
+#
+# playwright is also excluded — Instagram scraping requires a paid
+# Render plan with browser support. Keep the scraper running locally
+# and only use Render for the REST API + analytics + email.
+# ─────────────────────────────────────────────────────────────────
+
+fastapi==0.111.0
+uvicorn==0.29.0
+sqlalchemy==2.0.30
+alembic==1.13.1
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+email-validator==2.1.1
+python-dotenv==1.0.1
+pydantic==2.7.1
+pydantic-settings==2.2.1
+resend==0.8.0
+websockets==12.0
+python-multipart==0.0.9
+httpx==0.27.0
+fpdf2==2.8.1
+numpy<2.0.0

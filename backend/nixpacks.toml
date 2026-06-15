@@ -1,0 +1,24 @@
+# nixpacks.toml — Railway build configuration
+# Tells Railway to install system packages needed for Playwright/Chromium
+
+[phases.setup]
+nixPkgs = [
+  "python311",
+  # Chromium/Playwright system dependencies
+  "chromium",
+  "nss",
+  "freetype",
+  "harfbuzz",
+  "ca-certificates",
+  "ttf-dejavu",
+]
+
+[phases.build]
+cmds = [
+  "pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cpu",
+  "pip install -r requirements.txt",
+  "playwright install chromium",
+]
+
+[start]
+cmd = "uvicorn main:app --host 0.0.0.0 --port $PORT"
