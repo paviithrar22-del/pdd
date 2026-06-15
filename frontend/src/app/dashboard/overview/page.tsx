@@ -63,7 +63,7 @@ export default function OverviewPage() {
     e.preventDefault(); setMonLoading(true);
     try {
       await monitorApi.start(monForm);
-      setMonForm({ instagram_username: "", instagram_password: "" });
+      setMonForm({ instagram_username: "", instagram_password: "", target_profile_url: "" });
       load();
     } catch {}
     setMonLoading(false);
