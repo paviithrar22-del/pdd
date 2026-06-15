@@ -3,10 +3,10 @@ services:
     name: cybershield-backend
     runtime: python
     region: singapore       # Closest to India
-    plan: standard          # $25/mo — needed for 2GB RAM (torch + transformers + Playwright)
+    plan: free              # Free tier
     # plan: starter         # $7/mo — only 512MB RAM, insufficient for ML models
     rootDir: backend
-    buildCommand: bash build.sh
+    buildCommand: pip install -r requirements-render.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: SECRET_KEY

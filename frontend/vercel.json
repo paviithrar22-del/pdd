@@ -2,11 +2,5 @@
   "version": 2,
   "framework": "nextjs",
   "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://eddie-cruz-temperature-wishlist.trycloudflare.com/api/:path*"
-    }
-  ]
+  "outputDirectory": ".next"
 }
