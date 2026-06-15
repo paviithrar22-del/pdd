@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: cybershield-backend
+    runtime: python
+    region: singapore   # Closest to India
+    plan: starter       # Free tier ($0/month) — no Playwright support
+    # plan: standard    # Paid ($7/month) — needed for Playwright/browser scraping
+    rootDir: backend
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./cybershield.db
+      - key: DEBUG
+        value: false
+      - key: FRONTEND_URL
+        value: https://your-app.vercel.app   # <-- update after Vercel deploy
+      - key: SMTP_HOST
+        sync: false   # fill manually in Render dashboard
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_EMAIL
+        sync: false   # fill manually in Render dashboard
+      - key: SMTP_PASSWORD
+        sync: false   # fill manually in Render dashboard

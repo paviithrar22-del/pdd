@@ -81,10 +81,14 @@ def trends(user: User = Depends(get_current_user), db: Session = Depends(get_db)
         ModerationResult.severity, func.count(ModerationResult.id)
     ).group_by(ModerationResult.severity).all()
 
-    # Top offenders
-    offenders = db.query(
+    # Top offenders — exclude bad identifiers (numeric IDs, 'Active', truncated usernames)
+    BAD_PATTERN = ["%17%", "Active", "......"]
+    offenders_q = db.query(
         Violation.user_identifier, func.count(Violation.id).label("count")
-    ).group_by(Violation.user_identifier).order_by(func.count(Violation.id).desc()).limit(10).all()
+    ).group_by(Violation.user_identifier)
+    for p in BAD_PATTERN:
+        offenders_q = offenders_q.filter(~Violation.user_identifier.like(p))
+    offenders = offenders_q.order_by(func.count(Violation.id).desc()).limit(10).all()
 
     # Daily violations trend (additive new key)
     daily_violations = get_daily_violations_trend(db, days=14)
@@ -100,9 +104,14 @@ def trends(user: User = Depends(get_current_user), db: Session = Depends(get_db)
 @router.get("/offenders")
 def offenders(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     from app.services.analysis_pipeline import get_offender_level
-    rows = db.query(
+    # Exclude bad identifiers (numeric IDs, 'Active', truncated usernames)
+    BAD_PATTERN = ["%17%", "Active", "......"]
+    q = db.query(
         Violation.user_identifier, func.count(Violation.id).label("count")
-    ).group_by(Violation.user_identifier).order_by(func.count(Violation.id).desc()).limit(50).all()
+    ).group_by(Violation.user_identifier)
+    for p in BAD_PATTERN:
+        q = q.filter(~Violation.user_identifier.like(p))
+    rows = q.order_by(func.count(Violation.id).desc()).limit(50).all()
     return {"success": True, "message": "OK", "data": [
         {"username": u, "violations": n, "risk_level": get_offender_level(n)} for u, n in rows
     ]}

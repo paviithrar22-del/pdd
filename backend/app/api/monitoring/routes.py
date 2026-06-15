@@ -18,6 +18,7 @@ router = APIRouter(prefix="/monitor", tags=["monitoring"])
 class MonitorStartRequest(BaseModel):
     instagram_username: str
     instagram_password: str
+    target_profile_url: Optional[str] = None
 
 
 class IngestRequest(BaseModel):
@@ -48,7 +49,7 @@ def start(req: MonitorStartRequest, user: User = Depends(get_current_user), db: 
     db.commit()
     db.refresh(account)
 
-    start_monitoring(account)
+    start_monitoring(account, req.target_profile_url)
     return {"success": True, "message": "Monitoring started (session expires in 15 min)", "data": {"account_id": account.id}}
 
 

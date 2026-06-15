@@ -149,36 +149,61 @@ export default function OffendersPage() {
           <p className="text-[hsl(var(--muted-foreground))] font-medium text-lg">No threat entities tracked yet.</p>
         </motion.div>
       ) : (
-        /* Leaderboard */
+        /* Leaderboard — card list (mobile friendly) */
         <motion.div 
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
           className="glass-panel rounded-2xl overflow-hidden relative"
         >
           <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 blur-3xl pointer-events-none" />
-          <table className="w-full relative z-10">
-            <thead>
-              <tr className="border-b border-white/[0.05] bg-white/[0.01]">
-                <th className="text-left p-5 text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Rank</th>
-                <th className="text-left p-5 text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Identity</th>
-                <th className="text-left p-5 text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Violations</th>
-                <th className="text-left p-5 text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Risk Level</th>
-                <th className="text-left p-5 text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Threat Bar</th>
-                <th className="p-5" />
-              </tr>
-            </thead>
-            <tbody>
-              {offenders.map((o, i) => (
-                <motion.tr
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
-                  key={o.username}
-                  className="border-b border-white/[0.05] last:border-0 hover:bg-white/[0.03] cursor-pointer transition-colors group"
-                  onClick={() => openDetail(o.username)}
-                >
-                  <td className="p-5 text-sm text-[hsl(var(--muted-foreground))] font-mono">{i + 1}</td>
-                  <td className="p-5 text-sm text-cyan-400 font-bold drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">@{o.username}</td>
-                  <td className="p-5 text-sm text-white font-black">{o.violations}</td>
-                  <td className="p-5"><SeverityBadge level={o.risk_level} /></td>
-                  <td className="p-5 w-48">
+          {/* Desktop Table Header */}
+          <div className="hidden md:grid md:grid-cols-[40px_1fr_100px_130px_1fr_40px] border-b border-white/[0.05] bg-white/[0.01] px-5 py-3">
+            <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Rank</span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Identity</span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Violations</span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Risk Level</span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold uppercase tracking-wider">Threat Bar</span>
+            <span />
+          </div>
+
+          <div className="divide-y divide-white/[0.05] relative z-10">
+            {offenders.map((o, i) => (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                key={o.username}
+                className="px-5 py-4 hover:bg-white/[0.03] cursor-pointer transition-colors group"
+                onClick={() => openDetail(o.username)}
+              >
+                {/* Mobile layout */}
+                <div className="md:hidden flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[hsl(var(--muted-foreground))] font-mono text-sm shrink-0">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-cyan-400 font-bold text-sm truncate drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">@{o.username}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-white text-xs font-bold">{o.violations} violations</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-black/40 overflow-hidden mt-2 w-32">
+                        <motion.div
+                          initial={{ width: 0 }} animate={{ width: `${Math.min((o.violations / maxViolations) * 100, 100)}%` }}
+                          transition={{ duration: 1, ease: "easeOut" }}
+                          className="h-full bg-gradient-to-r from-red-500/80 to-red-400 rounded-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <SeverityBadge level={o.risk_level} />
+                    <ChevronRight className="w-4 h-4 text-[hsl(var(--muted-foreground))] group-hover:text-cyan-400 transition-colors" />
+                  </div>
+                </div>
+
+                {/* Desktop layout */}
+                <div className="hidden md:grid md:grid-cols-[40px_1fr_100px_130px_1fr_40px] items-center">
+                  <span className="text-sm text-[hsl(var(--muted-foreground))] font-mono">{i + 1}</span>
+                  <span className="text-sm text-cyan-400 font-bold drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">@{o.username}</span>
+                  <span className="text-sm text-white font-black">{o.violations}</span>
+                  <span><SeverityBadge level={o.risk_level} /></span>
+                  <div className="pr-8">
                     <div className="h-2 rounded-full bg-black/40 overflow-hidden shadow-inner border border-white/5">
                       <motion.div
                         initial={{ width: 0 }} animate={{ width: `${Math.min((o.violations / maxViolations) * 100, 100)}%` }}
@@ -186,15 +211,14 @@ export default function OffendersPage() {
                         className="h-full bg-gradient-to-r from-red-500/80 to-red-400 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.8)]"
                       />
                     </div>
-                  </td>
-                  <td className="p-5 text-right">
-                    <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-cyan-400 transition-colors inline-block" />
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-[hsl(var(--muted-foreground))] group-hover:text-cyan-400 transition-colors justify-self-end" />
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </motion.div>
+
       )}
       </AnimatePresence>
     </div>

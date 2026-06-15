@@ -47,8 +47,7 @@ def _get_prior_violations(db: Session, author: str) -> int:
 
 
 def analyze_content(
-    db: Session,
-    user: User,
+    user_id: int,
     content_type: str,  # "comment" or "message"
     content_id: int,
     text: str,
@@ -57,86 +56,96 @@ def analyze_content(
     if not text or not text.strip():
         return {}
 
-    # 1. Classify
-    mod = classify_text(text)
-    toxicity_score = mod["toxicity_score"]
-    category = mod["category"]
-    confidence = mod["confidence"]
+    from app.database.base import SessionLocal
+    db = SessionLocal()
 
-    # 2. Severity
-    is_threat = is_threat_category(category)
-    prior_violations = _get_prior_violations(db, author)
-    sev = calculate_severity(toxicity_score, is_threat, prior_violations)
-    severity_level = sev["severity_level"]
-    severity_score = sev["severity_score"]
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            return {}
 
-    # 3. Store moderation result
-    result = ModerationResult(
-        content_type=content_type,
-        content_id=content_id,
-        toxicity_score=toxicity_score,
-        category=category,
-        severity=severity_level,
-        confidence=confidence,
-    )
-    db.add(result)
+        # 1. Classify
+        mod = classify_text(text)
+        toxicity_score = mod["toxicity_score"]
+        category = mod["category"]
+        confidence = mod["confidence"]
 
-    # 4. Track violations
-    if toxicity_score > 0.3:
-        violation = Violation(
-            user_identifier=author,
-            violation_type=category,
+        # 2. Severity
+        is_threat = is_threat_category(category)
+        prior_violations = _get_prior_violations(db, author)
+        sev = calculate_severity(toxicity_score, is_threat, prior_violations)
+        severity_level = sev["severity_level"]
+        severity_score = sev["severity_score"]
+
+        # 3. Store moderation result
+        result = ModerationResult(
+            content_type=content_type,
+            content_id=content_id,
+            toxicity_score=toxicity_score,
+            category=category,
             severity=severity_level,
+            confidence=confidence,
         )
-        db.add(violation)
+        db.add(result)
 
-    # 5. Create alert
-    if toxicity_score > 0.3:
-        alert = Alert(
-            user_id=user.id,
-            alert_type=category,
-            severity=severity_level,
-            content_preview=text[:200],
-            status="unread",
-        )
-        db.add(alert)
+        # 4. Track violations
+        if toxicity_score > 0.3:
+            violation = Violation(
+                user_identifier=author,
+                violation_type=category,
+                severity=severity_level,
+            )
+            db.add(violation)
 
-    db.commit()
+        # 5. Create alert
+        if toxicity_score > 0.3:
+            alert = Alert(
+                user_id=user.id,
+                alert_type=category,
+                severity=severity_level,
+                content_preview=text[:200],
+                status="unread",
+            )
+            db.add(alert)
 
-    # 6. Broadcast via WebSocket (thread-safe)
-    if toxicity_score > 0.3:
-        _broadcast({
-            "event": f"new_{content_type}",
-            "severity": severity_level,
-            "category": category,
-            "author": author,
-        })
+        db.commit()
 
-    # 7. Emergency
-    if is_critical(severity_level):
-        trigger_emergency(
-            db=db,
-            user=user,
-            content_preview=text,
-            severity_score=severity_score,
-            severity_level=severity_level,
-            incident_type=category,
-            report_data={
-                "content_type": content_type,
-                "content_id": content_id,
+        # 6. Broadcast via WebSocket (thread-safe)
+        if toxicity_score > 0.3:
+            _broadcast({
+                "event": f"new_{content_type}",
+                "severity": severity_level,
+                "category": category,
                 "author": author,
-                "toxicity_score": toxicity_score,
-            },
-        )
-        if is_critical(severity_level):
-            _broadcast({"event": "emergency_triggered", "severity": severity_level})
+            })
 
-    return {
-        "toxicity_score": toxicity_score,
-        "category": category,
-        "severity": severity_level,
-        "severity_score": severity_score,
-    }
+        # 7. Emergency
+        if is_critical(severity_level):
+            trigger_emergency(
+                db=db,
+                user=user,
+                content_preview=text,
+                severity_score=severity_score,
+                severity_level=severity_level,
+                incident_type=category,
+                report_data={
+                    "content_type": content_type,
+                    "content_id": content_id,
+                    "author": author,
+                    "toxicity_score": toxicity_score,
+                },
+            )
+            if is_critical(severity_level):
+                _broadcast({"event": "emergency_triggered", "severity": severity_level})
+
+        return {
+            "toxicity_score": toxicity_score,
+            "category": category,
+            "severity": severity_level,
+            "severity_score": severity_score,
+        }
+    finally:
+        db.close()
 
 
 def get_offender_level(violation_count: int) -> str:

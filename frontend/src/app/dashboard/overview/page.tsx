@@ -30,7 +30,7 @@ const severityColor: Record<string, string> = {
 export default function OverviewPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [status, setStatus] = useState<any[]>([]);
-  const [monForm, setMonForm] = useState({ instagram_username: "", instagram_password: "" });
+  const [monForm, setMonForm] = useState({ instagram_username: "", instagram_password: "", target_profile_url: "" });
   const [monLoading, setMonLoading] = useState(false);
   const [liveEvents, setLiveEvents] = useState<string[]>([]);
 
@@ -188,6 +188,7 @@ export default function OverviewPage() {
             <form onSubmit={startMonitor} className="space-y-3">
               <input value={monForm.instagram_username} onChange={e => setMonForm({ ...monForm, instagram_username: e.target.value })} placeholder="Instagram username" required className="w-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500" />
               <input type="password" value={monForm.instagram_password} onChange={e => setMonForm({ ...monForm, instagram_password: e.target.value })} placeholder="Instagram password" required className="w-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500" />
+              <input value={monForm.target_profile_url} onChange={e => setMonForm({ ...monForm, target_profile_url: e.target.value })} placeholder="Target profile URL (optional)" className="w-full bg-[hsl(var(--muted))] border border-[hsl(var(--border))] text-white rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-cyan-500" />
               <button type="submit" disabled={monLoading} className="w-full py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm disabled:opacity-50 transition-colors">{monLoading ? "Starting..." : "Start Monitoring"}</button>
             </form>
           )}

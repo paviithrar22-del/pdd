@@ -11,7 +11,10 @@ export function useWebSocket(onMessage: (data: any) => void) {
     if (!token) return;
 
     try {
-      ws.current = new WebSocket(`ws://localhost:8000/ws?token=${token}`);
+      // In production, NEXT_PUBLIC_WS_URL points to the Render backend (e.g. wss://cybershield-backend.onrender.com/ws)
+      // In development, falls back to localhost
+      const wsBase = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+      ws.current = new WebSocket(`${wsBase}?token=${token}`);
 
       ws.current.onmessage = (e) => {
         try { onMessage(JSON.parse(e.data)); } catch {}

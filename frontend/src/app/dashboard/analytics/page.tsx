@@ -141,19 +141,25 @@ export default function AnalyticsPage() {
         </motion.div>
 
         {/* Top Offenders Chart */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-panel rounded-2xl p-7 lg:col-span-2">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="glass-panel rounded-2xl p-5 md:p-7 lg:col-span-2">
           <h2 className="text-white font-bold text-lg mb-6 flex items-center gap-2"><div className="w-1.5 h-6 bg-red-500 rounded-full shadow-[0_0_8px_rgba(239,68,68,0.6)]" /> Top Risk Entities</h2>
           {offenderData.length === 0 ? (
             <p className="text-[hsl(var(--muted-foreground))] text-sm">No violations detected yet.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={offenderData} layout="vertical">
-                <XAxis type="number" tick={{ fill: "#6b7280", fontSize: 12 }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="username" type="category" tick={{ fill: "#9ca3af", fontSize: 12, fontWeight: 500 }} width={120} axisLine={false} tickLine={false} />
+            <ResponsiveContainer width="100%" height={Math.max(220, offenderData.length * 42)}>
+              <BarChart data={offenderData} layout="vertical" margin={{ left: 0, right: 16 }}>
+                <XAxis type="number" tick={{ fill: "#6b7280", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis
+                  dataKey="username"
+                  type="category"
+                  tick={{ fill: "#9ca3af", fontSize: 11, fontWeight: 500 }}
+                  width={90}
+                  axisLine={false}
+                  tickLine={false}
+                  tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + '…' : v}
+                />
                 <Tooltip contentStyle={CustomTooltipStyle} cursor={{ fill: "rgba(255,255,255,0.02)" }} />
-                <Bar dataKey="violations" fill="url(#colorRed)" radius={[0, 6, 6, 0]}>
-                  {offenderData.map((_, i: number) => <Cell key={i} />)}
-                </Bar>
+                <Bar dataKey="violations" fill="url(#colorRed)" radius={[0, 6, 6, 0]} />
                 <defs>
                   <linearGradient id="colorRed" x1="0" y1="0" x2="1" y2="0">
                     <stop offset="0%" stopColor="#ef4444" stopOpacity={0.6}/>

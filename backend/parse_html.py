@@ -1,0 +1,10 @@
+import re
+html = open('instagram_login_page.html', encoding='utf-8').read()
+title = re.search(r'<title.*?>(.*?)</title>', html, re.IGNORECASE)
+print('Title:', title.group(1) if title else 'None')
+inputs = re.findall(r'<input[^>]*name=[\'\"]([^\'\"]+)[\'\"][^>]*>', html, re.IGNORECASE)
+print('Inputs:', inputs)
+buttons = set(re.findall(r'<button[^>]*>(.*?)</button>', html, re.IGNORECASE | re.DOTALL))
+print('Buttons:', [re.sub(r'<[^>]+>', '', b).strip() for b in buttons])
+print('Has password input:', 'password' in html.lower())
+print('Has username input:', 'username' in html.lower())
