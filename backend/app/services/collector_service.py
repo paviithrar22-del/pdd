@@ -502,7 +502,7 @@ async def _run_monitor(account_id: int, stop_event: threading.Event, target_prof
             browser = await p.chromium.launch(headless=is_headless)
             state_dir = "sessions"
             os.makedirs(state_dir, exist_ok=True)
-            state_path = os.path.join(state_dir, f"account_{account_id}.json")
+            state_path = os.path.join(state_dir, f"account_{username}.json")
             
             if os.path.exists(state_path):
                 context = await browser.new_context(storage_state=state_path)
